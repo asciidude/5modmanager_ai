@@ -1,0 +1,16 @@
+{
+  "name": "gtav.mod.manager",
+  "version": "0.0.1",
+  "description": "An ASI and SHVDN mod manager",
+  "main": "app.js",
+  "author": "asciidude",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.19.2"
+  }
+}

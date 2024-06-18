@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTA V Mod Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f1f1f;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            width: 90%;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .mod-box {
+            background-color: #2c2c2c;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+            overflow: auto;
+            max-height: 80vh;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #444444;
+        }
+        th {
+            background-color: #444444;
+            text-transform: uppercase;
+        }
+        .edit-button, .delete-button, .cancel-button {
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .edit-button {
+            background-color: #4CAF50;
+        }
+        .edit-button:hover {
+            background-color: #45a049;
+        }
+        .delete-button {
+            background-color: #f44336;
+        }
+        .delete-button:hover {
+            background-color: #da190b;
+        }
+        .cancel-button {
+            background-color: #555555;
+        }
+        .cancel-button:hover {
+            background-color: #666666;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #333333;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 10px;
+            color: #ffffff;
+            position: relative;
+            text-align: left;
+        }
+        .modal-content h2 {
+            margin-top: 0;
+        }
+        .modal-content textarea {
+            width: calc(100% - 22px); /* Adjust for padding and border */
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #555555;
+            background-color: #2c2c2c;
+            color: #ffffff;
+            resize: vertical;
+            min-height: 150px;
+            max-height: 300px;
+            box-sizing: border-box;
+        }
+        .modal-content textarea:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        .close {
+            color: #aaaaaa;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: #ffffff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #noModsMessage {
+            display: none;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GTA V Mod Manager</h1>
+        <div class="mod-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mod File</th>
+                        <th>File Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="modList"></tbody>
+            </table>
+            <div id="noModsMessage">No mods found</div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2 id="editModalTitle"></h2>
+            <textarea id="editModalContent" rows="10"></textarea>
+            <div class="actions">
+                <button class="edit-button" onclick="saveIni()">Save</button>
+                <button class="cancel-button" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            loadMods();
+        });
+
+        function loadMods() {
+            $.ajax({
+                type: 'GET',
+                url: '/load-mods',
+                success: function(modList) {
+                    $('#modList').empty();
+                    if (modList.message) {
+                        $('#noModsMessage').show();
+                    } else {
+                        $('#noModsMessage').hide();
+                        modList.forEach(function(mod) {
+                            var listItem = $('<tr>').attr('data-mod-file', mod.modFile);
+                            var modName = $('<td>').text(mod.modFile);
+                            var modType = $('<td>').text(mod.fileType);
+                            var actions = $('<td>');
+                            if (mod.iniFileExists) {
+                                var editButton = $('<button class="edit-button">').text('Edit').click(function() {
+                                    openEditModal(mod.modFile, mod.iniFile);
+                                });
+                                actions.append(editButton);
+                            }
+                            var deleteButton = $('<button class="delete-button">').text('Delete').click(function() {
+                                deleteFiles(mod.directory, mod.iniFile, listItem);
+                            });
+                            actions.append(deleteButton);
+                            listItem.append(modName).append(modType).append(actions);
+                            $('#modList').append(listItem);
+                        });
+                    }
+                },
+                error: function(err) {
+                    console.error('Error loading mods:', err.responseText);
+                    alert('Error loading mods: ' + err.responseText);
+                }
+            });
+        }
+
+        function openEditModal(modFile, iniFile) {
+            $('#editModalTitle').text('Edit ' + modFile);
+            $.ajax({
+                type: 'GET',
+                url: '/read-ini',
+                data: { iniFile: iniFile },
+                success: function(data) {
+                    $('#editModalContent').val(data);
+                    $('#editModal').data('iniFile', iniFile);
+                    $('#editModal').data('modFile', modFile);
+                    $('#editModal').show();
+                },
+                error: function(err) {
+                    console.error('Error reading INI file:', err.responseText);
+                    alert('Error reading INI file: ' + err.responseText);
+                }
+            });
+        }
+
+        function closeEditModal() {
+            $('#editModal').hide();
+        }
+
+        function saveIni() {
+            var iniContent = $('#editModalContent').val();
+            var iniFile = $('#editModal').data('iniFile');
+            $.ajax({
+                type: 'POST',
+                url: '/save-ini',
+                data: {
+                    iniContent: iniContent,
+                    iniFile: iniFile
+                },
+                success: function() {
+                    alert('INI file saved successfully');
+                    closeEditModal();
+                },
+                error: function(err) {
+                    console.error('Error saving INI file:', err.responseText);
+                    alert('Error saving INI file: ' + err.responseText);
+                }
+            });
+        }
+
+        function deleteFiles(directory, iniFile, listItem) {
+            $.ajax({
+                type: 'POST',
+                url: '/delete-files',
+                data: { directory: directory, iniFile: iniFile },
+                success: function() {
+                    alert('Files deleted successfully');
+                    listItem.remove();
+                    if ($('#modList').children().length === 0) {
+                        $('#noModsMessage').show();
+                    }
+                },
+                error: function(err) {
+                    console.error('Error deleting files:', err.responseText);
+                    alert('Error deleting files: ' + err.responseText);
+                }
+            });
+        }
+
+        closeEditModal();
+    </script>
+</body>
+</html>
